@@ -15,7 +15,7 @@
         data-defaultToImageSearch="true"
       ></div>
 
-      <div class="search-result">
+      <div id="search-result" class="search-result">
         <div class="gcse-searchresults"></div>
       </div>
     </div>
@@ -25,14 +25,17 @@
     <el-dialog
       title="Tìm kiếm ảnh"
       :visible.sync="dialogVisible"
-      width="80%"
       @open="onInitial"
       @opened="addOpened"
       @closed="onEndSearch"
       append-to-body
     >
       <!-- <div class="gcse-searchresults-only"></div> -->
-      <div class="search-box" ref="search"></div>
+      <div class="search-box" ref="search">
+        <!-- <div class="g-image-preview" v-show="selectedImage">
+          <img :src="selectedImage" alt="" />
+        </div> -->
+      </div>
       <div id="upload" class="upload"></div>
       <!-- <div
         class="gcse-search"
@@ -60,8 +63,10 @@ export default {
     return {
       isSearch: false,
       selectedImage: "",
+      showPreview: false,
       dialogVisible: false,
       isDisabled: true,
+      iconClose: require("../assets/icon-close.svg"),
     };
   },
 
@@ -69,9 +74,112 @@ export default {
     if (window.google === undefined || !window.google.search) {
       loadScript("https://cse.google.com/cse.js?cx=e7b5ff1a9b019e32b");
     }
+
+    window.__gcse || (window.__gcse = {});
+    window.__gcse.searchCallbacks = {
+      web: {
+        rendered: function () {
+          debugger;
+          document.getElementsByClassName("gsc-cursor")[0].style.fontSize =
+            "20px";
+        },
+      },
+    };
+  },
+
+  mounted() {
+    window.__gcse || (window.__gcse = {});
+    window.__gcse.searchCallbacks = {
+      image: {
+        rendered: this.myImageResultsRenderedCallback,
+      },
+    };
   },
 
   methods: {
+    myImageResultsRenderedCallback(name, q, promos, results) {
+      const me = this;
+      for (const div of promos.concat(results)) {
+        div.addEventListener("click", function (e) {
+          var list = document.getElementById("search-result");
+          const innerDiv = document.createElement("div");
+          innerDiv.setAttribute("id", "g-image-preview-bndung");
+
+          me.addClassToElement(
+            innerDiv,
+            "relative flex justify-between items-center"
+          );
+          const image = document.createElement("img");
+          debugger;
+          me.addClassToElement(
+            image,
+            "google-image-preview h-full p-3 bg-neutral-500"
+          );
+          image.src =
+            e.currentTarget.children[1].getElementsByTagName("img")[0].src;
+          // checkBox.type = "checkbox";
+          // checkBox.name = "save";
+          innerDiv.appendChild(image);
+
+          // thêm icon hủy
+          const iconClose = document.createElement("img");
+          iconClose.src = require("../assets/icon-close.svg");
+          iconClose.addEventListener("click", function (e) {
+            console.log(e);
+            debugger;
+            me.modifyGrid(false);
+            me.removePreview();
+          });
+          me.addClassToElement(
+            iconClose,
+            "absolute top-6 right-6 h-6 w-6 bg-gray-500 cursor-pointer"
+          );
+          // iconClose.classList.add("absolute t-6 r-6 ");
+          innerDiv.appendChild(iconClose);
+          debugger;
+          if (document.getElementById("g-image-preview")) {
+            list.removeChild(document.getElementById("g-image-preview"));
+          }
+          list.appendChild(innerDiv);
+
+          // thu nhỏ grid
+          me.modifyGrid(true);
+        });
+      }
+    },
+
+    closePreview() {
+      const me = this;
+
+      me.modifyGrid(false);
+      me.removePreview();
+    },
+
+    removePreview() {
+      var list = document.getElementById("search-result");
+
+      if (document.getElementById("g-image-preview")) {
+        list.removeChild(document.getElementById("g-image-preview"));
+      }
+    },
+
+    addClassToElement(element, className) {
+      className.split(" ").map((item) => {
+        element.classList.add(item);
+      });
+    },
+
+    modifyGrid(hasPreview) {
+      if (hasPreview)
+        document
+          ?.getElementsByClassName("gsc-expansionArea")[1]
+          ?.setAttribute("style", "grid-template-columns: 1fr 1fr");
+      else
+        document
+          ?.getElementsByClassName("gsc-expansionArea")[1]
+          ?.setAttribute("style", "grid-template-columns: 1fr 1fr 1fr 1fr");
+    },
+
     onClickAdd() {
       this.dialogVisible = true;
 
@@ -87,6 +195,7 @@ export default {
 
     turnOnSearch() {
       console.log("event");
+
       this.isDisabled = false;
       this.isSearch = true;
     },
@@ -111,8 +220,31 @@ export default {
 
     addOpened() {
       console.log("opened");
+      // gán place holder
+
+      this.modifyGrid(false);
+      const input = document
+        ?.getElementById("gs_tti50")
+        ?.getElementsByTagName("input")[0];
+      debugger;
+
+      if (document?.getElementById("g-image-preview-bndung"))
+        this.addClassToElement(
+          document?.getElementById("g-image-preview-bndung"),
+          "hidden"
+        );
+
+      debugger;
+      // this.selectedImage = "";
+
+      // document
+      //   ?.getElementsByClassName("gs-image")
+      //   ?.addEventListener("click", this.onPreviewImage);
+
+      input?.setAttribute("placeholder", "Enter your number");
+
       var searchBox = document.getElementById("___gcse_0");
-      var searchResult = document.getElementById("___gcse_1");
+      var searchResult = document.getElementById("search-result");
       this.$refs?.search.appendChild(searchBox);
       this.$refs?.search.appendChild(searchResult);
       this.isSearch = false;
@@ -132,21 +264,29 @@ export default {
     },
 
     async onChoose() {
-      const response = await fetch(
-        document
-          .getElementsByClassName("gs-selectedImageResult")[0]
-          .getElementsByClassName("gs-imagePreviewArea")[0]
-          .getElementsByClassName("gs-previewLink")[0]
-          .getElementsByTagName("img")[0]
-          .getAttribute("src")
-      );
-      console.log(response);
-      const data = await response.blob();
-      console.log(data);
+      this.selectedImage = document
+        .getElementsByClassName("gs-selectedImageResult")[0]
+        .getElementsByClassName("gs-imagePreviewArea")[0]
+        .getElementsByClassName("gs-previewLink")[0]
+        .getElementsByTagName("img")[0]
+        .getAttribute("src");
 
-      const metadata = { type: "image/png" };
-      const file = new File([data], "test.png", metadata);
-      console.log(file);
+      this.dialogVisible = false;
+      // const response = await fetch(
+      //   document
+      //     .getElementsByClassName("gs-selectedImageResult")[0]
+      //     .getElementsByClassName("gs-imagePreviewArea")[0]
+      //     .getElementsByClassName("gs-previewLink")[0]
+      //     .getElementsByTagName("img")[0]
+      //     .getAttribute("src")
+      // );
+      // console.log(response);
+      // const data = await response.blob();
+      // console.log(data);
+
+      // const metadata = { type: "image/png" };
+      // const file = new File([data], "test.png", metadata);
+      // console.log(file);
     },
   },
 
@@ -158,6 +298,44 @@ export default {
 };
 </script>
 <style lang="scss">
+.___gcse_1 {
+  width: 100%;
+}
+
+.google-image-preview {
+  width: 800px;
+  height: 521px;
+  object-fit: cover;
+}
+
+.gs-selectedImageResult {
+  height: auto !important;
+}
+
+.gs-imagePreviewArea {
+  display: none !important;
+}
+
+.el-dialog {
+  width: 1000px !important;
+}
+
+.gsc-expansionArea {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 5px !important;
+}
+
+.gs-image {
+  width: 100% !important;
+  height: 190px !important;
+  object-fit: cover !important;
+}
+
+.gsc-imageResult {
+  overflow: hidden;
+}
+
 .gsc-positioningWrapper,
 .gsc-above-wrapper-area,
 .gs-previewSnippet {
@@ -205,6 +383,13 @@ export default {
 }
 
 .search-result {
-  /* display: none; */
+  display: flex;
+}
+
+.google-image-preview {
+  width: 459px;
+  height: 100%;
+  padding: 12px;
+  object-fit: cover;
 }
 </style>

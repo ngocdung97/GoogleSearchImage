@@ -9,6 +9,7 @@ import "element-ui/lib/theme-chalk/index.css";
 // Import Bootstrap an BootstrapVue CSS files (order is important)
 import "bootstrap/dist/css/bootstrap.css";
 import "bootstrap-vue/dist/bootstrap-vue.css";
+import "./index.css";
 
 import {
   Pagination,

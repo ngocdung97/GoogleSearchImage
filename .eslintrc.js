@@ -19,6 +19,13 @@ module.exports = {
     "@typescript-eslint/explicit-module-boundary-types": "off",
     "no-unused-vars": "off",
     "@typescript-eslint/no-unused-vars": ["error"],
+    "@typescript-eslint/no-this-alias": [
+      "error",
+      {
+        allowDestructuring: false, // Disallow `const { props, state } = this`; true by default
+        allowedNames: ["me"], // Allow `const me = this`; `[]` by default
+      },
+    ],
   },
   overrides: [
     {
